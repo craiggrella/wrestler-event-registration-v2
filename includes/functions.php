@@ -91,14 +91,15 @@ function wer_get_all_wrestlers() {
 }
 
 /**
- * Get registration for a specific wrestler and event
+ * Get registration for a specific wrestler and event occurrence
  */
-function wer_get_registration($event_id, $wrestler_id) {
+function wer_get_registration($event_id, $event_start, $wrestler_id) {
     global $wpdb;
     
     return $wpdb->get_row($wpdb->prepare(
-        "SELECT * FROM " . WER_TABLE_NAME . " WHERE event_id = %d AND wrestler_id = %s",
+        "SELECT * FROM " . WER_TABLE_NAME . " WHERE event_id = %d AND event_start = %d AND wrestler_id = %s",
         $event_id,
+        $event_start,
         $wrestler_id
     ));
 }
@@ -106,35 +107,39 @@ function wer_get_registration($event_id, $wrestler_id) {
 /**
  * Save or update registration
  */
-function wer_save_registration($event_id, $parent_user_id, $wrestler_id, $status) {
+function wer_save_registration($event_id, $event_start, $event_end, $parent_user_id, $wrestler_id, $status) {
     global $wpdb;
     
-    $existing = wer_get_registration($event_id, $wrestler_id);
+    $existing = wer_get_registration($event_id, $event_start, $wrestler_id);
     
     if ($existing) {
         $result = $wpdb->update(
             WER_TABLE_NAME,
             [
                 'status' => $status,
-                'parent_user_id' => $parent_user_id
+                'parent_user_id' => $parent_user_id,
+                'event_end' => $event_end
             ],
             [
                 'event_id' => $event_id,
+                'event_start' => $event_start,
                 'wrestler_id' => $wrestler_id
             ],
-            ['%s', '%d'],
-            ['%d', '%s']
+            ['%s', '%d', '%d'],
+            ['%d', '%d', '%s']
         );
     } else {
         $result = $wpdb->insert(
             WER_TABLE_NAME,
             [
                 'event_id' => $event_id,
+                'event_start' => $event_start,
+                'event_end' => $event_end,
                 'parent_user_id' => $parent_user_id,
                 'wrestler_id' => $wrestler_id,
                 'status' => $status
             ],
-            ['%d', '%d', '%s', '%s']
+            ['%d', '%d', '%d', '%d', '%s', '%s']
         );
     }
     
@@ -142,14 +147,17 @@ function wer_save_registration($event_id, $parent_user_id, $wrestler_id, $status
 }
 
 /**
- * Get registration counts for an event
+ * Get registration counts for a specific event occurrence
  */
-function wer_get_registration_counts($event_id) {
+function wer_get_registration_counts($event_id, $event_start) {
     global $wpdb;
     
     $counts = $wpdb->get_results($wpdb->prepare(
-        "SELECT status, COUNT(*) as count FROM " . WER_TABLE_NAME . " WHERE event_id = %d GROUP BY status",
-        $event_id
+        "SELECT status, COUNT(*) as count FROM " . WER_TABLE_NAME . " 
+         WHERE event_id = %d AND event_start = %d 
+         GROUP BY status",
+        $event_id,
+        $event_start
     ), OBJECT_K);
     
     return [
@@ -160,18 +168,20 @@ function wer_get_registration_counts($event_id) {
 }
 
 /**
- * Get wrestlers grouped by status for an event
+ * Get wrestlers grouped by status for a specific event occurrence
  */
-function wer_get_wrestlers_by_status($event_id) {
+function wer_get_wrestlers_by_status($event_id, $event_start) {
     global $wpdb;
     
     // Get all wrestlers from FluentCRM
     $all_wrestlers = wer_get_all_wrestlers();
     
-    // Get registrations from database
+    // Get registrations from database for this specific occurrence
     $registrations = $wpdb->get_results($wpdb->prepare(
-        "SELECT wrestler_id, status FROM " . WER_TABLE_NAME . " WHERE event_id = %d",
-        $event_id
+        "SELECT wrestler_id, status FROM " . WER_TABLE_NAME . " 
+         WHERE event_id = %d AND event_start = %d",
+        $event_id,
+        $event_start
     ), OBJECT_K);
     
     $grouped = [
@@ -183,7 +193,7 @@ function wer_get_wrestlers_by_status($event_id) {
     // Loop through all wrestlers and categorize them
     foreach ($all_wrestlers as $wrestler_id => $wrestler_data) {
         if (isset($registrations[$wrestler_id])) {
-            // Wrestler has a registration
+            // Wrestler has a registration for this occurrence
             $status = $registrations[$wrestler_id]->status;
         } else {
             // No registration = unanswered
