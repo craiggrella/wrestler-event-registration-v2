@@ -1,7 +1,23 @@
 jQuery(document).ready(function($) {
+    // Extract event occurrence data from URL
+    function getEventOccurrenceData() {
+        const urlParams = new URLSearchParams(window.location.search);
+        return {
+            eventStart: urlParams.get('eventstart') || '',
+            eventEnd: urlParams.get('eventend') || ''
+        };
+    }
+    
     $('.registration-btn').on('click', function() {
         var $btn = $(this);
         var $container = $btn.closest('.wrestler-registration-item');
+        var occurrenceData = getEventOccurrenceData();
+        
+        // Validate we have the occurrence timestamps
+        if (!occurrenceData.eventStart || !occurrenceData.eventEnd) {
+            alert('Error: Missing event occurrence data. Please access this page from the event calendar.');
+            return;
+        }
         
         // Disable buttons during request
         $container.find('.registration-btn').prop('disabled', true);
@@ -13,6 +29,8 @@ jQuery(document).ready(function($) {
                 action: 'wrestler_registration',
                 nonce: werAjax.nonce,
                 event_id: $btn.data('event-id'),
+                event_start: occurrenceData.eventStart,
+                event_end: occurrenceData.eventEnd,
                 wrestler_id: $btn.data('wrestler-id'),
                 status: $btn.data('status')
             },
