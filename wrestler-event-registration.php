@@ -3,7 +3,7 @@
  * Plugin Name: Wrestler Event Registration
  * Plugin URI: https://github.com/yourusername/wrestler-event-registration
  * Description: Event registration system for wrestlers with FluentCRM integration
- * Version: 1.0.0
+ * Version: 1.1.0
  * Author: Craig Grella
  * Author URI: https://yoursite.com
  * License: GPL v2 or later
@@ -19,7 +19,7 @@ if (!defined('WPINC')) {
 }
 
 // Define plugin constants
-define('WER_VERSION', '1.0.0');
+define('WER_VERSION', '1.1.0');
 define('WER_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('WER_PLUGIN_URL', plugin_dir_url(__FILE__));
 define('WER_PLUGIN_BASENAME', plugin_basename(__FILE__));
@@ -40,15 +40,18 @@ function wer_activate() {
     $sql = "CREATE TABLE $table_name (
         id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
         event_id bigint(20) UNSIGNED NOT NULL,
+        event_start bigint(20) UNSIGNED NOT NULL,
+        event_end bigint(20) UNSIGNED NOT NULL,
         parent_user_id bigint(20) UNSIGNED NOT NULL,
         wrestler_id varchar(100) NOT NULL,
         status varchar(20) NOT NULL DEFAULT 'unanswered',
         registered_date datetime DEFAULT CURRENT_TIMESTAMP,
         updated_date datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         PRIMARY KEY  (id),
-        UNIQUE KEY unique_registration (event_id, wrestler_id),
+        UNIQUE KEY unique_registration (event_id, event_start, wrestler_id),
         KEY parent_user_id (parent_user_id),
         KEY event_id (event_id),
+        KEY event_occurrence (event_id, event_start),
         KEY status (status)
     ) $charset_collate;";
 
