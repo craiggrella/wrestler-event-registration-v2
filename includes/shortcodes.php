@@ -15,6 +15,15 @@ function wer_display_registration($event_id) {
         return '';
     }
     
+    // Get event occurrence timestamps from URL
+    $event_start = isset($_GET['eventstart']) ? intval($_GET['eventstart']) : 0;
+    $event_end = isset($_GET['eventend']) ? intval($_GET['eventend']) : 0;
+    
+    // If we don't have occurrence data, show an error
+    if (!$event_start || !$event_end) {
+        return '<div class="wer-no-wrestlers">Error: This page must be accessed from the event calendar with occurrence information.</div>';
+    }
+    
     $user_id = get_current_user_id();
     $wrestlers = wer_get_parent_wrestlers($user_id);
     
@@ -29,7 +38,7 @@ function wer_display_registration($event_id) {
         
         <?php foreach ($wrestlers as $wrestler): ?>
             <?php 
-            $registration = wer_get_registration($event_id, $wrestler['id']);
+            $registration = wer_get_registration($event_id, $event_start, $wrestler['id']);
             $current_status = $registration ? $registration->status : 'unanswered';
             ?>
             
@@ -59,7 +68,7 @@ function wer_display_registration($event_id) {
         <div class="registration-response-section">
             <h3>Responses</h3>
             <?php 
-            $counts = wer_get_registration_counts($event_id);
+            $counts = wer_get_registration_counts($event_id, $event_start);
             ?>
             <div class="response-counts">
                 <div class="response-item attending">
