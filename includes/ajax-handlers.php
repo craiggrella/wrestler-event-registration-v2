@@ -18,23 +18,33 @@ function wer_handle_registration_ajax() {
     }
     
     $event_id = isset($_POST['event_id']) ? intval($_POST['event_id']) : 0;
+    $event_start = isset($_POST['event_start']) ? intval($_POST['event_start']) : 0;
+    $event_end = isset($_POST['event_end']) ? intval($_POST['event_end']) : 0;
     $wrestler_id = isset($_POST['wrestler_id']) ? sanitize_text_field($_POST['wrestler_id']) : '';
     $status = isset($_POST['status']) ? sanitize_text_field($_POST['status']) : '';
     $user_id = get_current_user_id();
     
-    if (!$event_id || !$wrestler_id) {
+    // Validate required fields
+    if (!$event_id || !$event_start || !$event_end || !$wrestler_id) {
         wp_send_json_error(['message' => 'Missing required fields']);
     }
     
+    // Validate status
     if (!in_array($status, ['attending', 'declined'])) {
         wp_send_json_error(['message' => 'Invalid status']);
     }
     
-    $result = wer_save_registration($event_id, $user_id, $wrestler_id, $status);
+    // Validate timestamps are reasonable (not in the past by more than a day, not more than 2 years in future)
+    $now = time();
+    if ($event_start < ($now - 86400) || $event_start > ($now + 63072000)) {
+        wp_send_json_error(['message' => 'Invalid event timestamp']);
+    }
+    
+    $result = wer_save_registration($event_id, $event_start, $event_end, $user_id, $wrestler_id, $status);
     
     if ($result) {
-        $counts = wer_get_registration_counts($event_id);
-        $wrestlers_by_status = wer_get_wrestlers_by_status($event_id);
+        $counts = wer_get_registration_counts($event_id, $event_start);
+        $wrestlers_by_status = wer_get_wrestlers_by_status($event_id, $event_start);
         
         wp_send_json_success([
             'message' => 'Registration updated',
